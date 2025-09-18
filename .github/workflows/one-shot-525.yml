@@ -1,0 +1,45 @@
+name: One Shot 525 Commits
+
+on:
+  workflow_dispatch:   # กดรันเองได้จากแท็บ Actions
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set Git config
+        run: |
+          git config user.name "sphererom"
+          git config user.email "PUT_YOUR_NOREPLY_EMAIL_HERE"  # เช่น 12345678+sphererom@users.noreply.github.com
+
+      - name: Make 525 commits with random short delays
+        run: |
+          FILE=action_commits.txt
+          touch "$FILE"
+
+          TOTAL=525
+          BATCH=75        # push ทุก 75 commit กันพลาด/timeout
+          COUNT=0
+
+          for ((i=1; i<=TOTAL; i++)); do
+            echo "One-shot commit $i - $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$FILE"
+            git add "$FILE"
+            git commit -m "chore: one-shot commit $i"
+
+            # หน่วงแบบสุ่ม 0.2–2.8 วินาที (ดูเป็นธรรมชาติ แต่ยังเร็วพอ)
+            DELAY=$(awk -v min=0.2 -v max=2.8 'BEGIN{srand(); print min+rand()*(max-min)}')
+            sleep $DELAY
+
+            COUNT=$((COUNT+1))
+            if [ $((COUNT % BATCH)) -eq 0 ]; then
+              echo "🔄 pushing batch at $COUNT commits"
+              git push
+            fi
+          done
+
+          # push รอบสุดท้าย (ถ้าจำนวนไม่ลงตัว)
+          git push
